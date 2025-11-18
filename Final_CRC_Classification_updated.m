@@ -35,6 +35,7 @@ CONFIG.invariance_scale = 20;          % Wavelet scattering parameter
 CONFIG.quality_factors = [1 1];        % Quality factors for scattering
 CONFIG.num_rotations = [6 6];          % Number of rotations
 
+
 % SVM Configuration
 CONFIG.svm_kernel = 'polynomial';      % Kernel function
 CONFIG.svm_poly_order = 3;             % Polynomial order
@@ -145,13 +146,15 @@ sn = waveletScattering2('ImageSize', CONFIG.image_size, ...
     'InvarianceScale', CONFIG.invariance_scale, ...
     'QualityFactors', CONFIG.quality_factors, ...
     'NumRotations', CONFIG.num_rotations);
+[spaths,npaths] = paths(sn);
+total_paths = sum(npaths);
 
 fprintf('Scattering network created with:\n');
 fprintf('  - Image Size: [%d, %d]\n', CONFIG.image_size);
 fprintf('  - Invariance Scale: %d\n', CONFIG.invariance_scale);
 fprintf('  - Quality Factors: [%d, %d]\n', CONFIG.quality_factors);
 fprintf('  - Number of Rotations: [%d, %d]\n', CONFIG.num_rotations);
-fprintf('  - Total scattering paths: %d\n', numel(sn.paths));
+fprintf('  - Total scattering paths: %d\n', total_paths);
 
 fprintf('\n');
 
@@ -160,7 +163,7 @@ fprintf('\n');
 %  ========================================================================
 
 fprintf('SECTION 6: Extracting wavelet scattering features...\n');
-fprintf('This may take several minutes...\n');
+fprintf('This may take a few minutes...\n');
 
 % Create tall arrays for parallel processing
 Ttrain = tall(trainImds);
@@ -283,13 +286,6 @@ cchart.Title = 'Confusion Matrix - SVM Classification Results';
 cchart.FontSize = 12;
 cchart.RowSummary = 'row-normalized';
 cchart.ColumnSummary = 'column-normalized';
-
-% Adjust colormap for better brightness/contrast
-colormap(cchart, 'turbo');  % Use brighter colormap
-
-% Make the font bold for better visibility
-cchart.FontName = 'Arial';
-cchart.FontWeight = 'bold';
 
 % Save confusion matrix figure
 saveFigure(fig_cm, 'Confusion_Matrix.png', CONFIG);
@@ -491,3 +487,4 @@ function features = helperScatImages_mean(sn, x)
     % Transpose to row vector
     features = features';
 end
+
