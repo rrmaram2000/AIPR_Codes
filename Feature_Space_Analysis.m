@@ -21,6 +21,11 @@ analysisConfig.tsne_perplexity = 30;
 analysisConfig.tsne_num_pca_components = 50;
 analysisConfig.tsne_exaggeration = 5;
 analysisConfig.tsne_learn_rate = 500;
+analysisConfig.enable_umap = true;
+analysisConfig.umap_num_dims = 2;
+analysisConfig.umap_n_neighbors = 15;
+analysisConfig.umap_min_dist = 0.1;
+analysisConfig.umap_metric = 'euclidean';
 analysisConfig.save_figures = true;
 analysisConfig.figure_format = 'png';
 analysisConfig.figures_dir = fullfile(pwd, 'figures');
@@ -148,6 +153,32 @@ title('t-SNE Projection of Scattering Features');
 legend('Location', 'bestoutside');
 saveFigureLocal(figure_tsne, 'tSNE_Scatter.png', analysisConfig);
 
+%% UMAP embedding (optional)
+if analysisConfig.enable_umap
+    fprintf('Running UMAP on %d samples (n\\_neighbors = %d, min\\_dist = %.3f)...\n', ...
+        numel(sampleIdx), analysisConfig.umap_n_neighbors, analysisConfig.umap_min_dist);
+    try
+        [umapEmbedding, umapBackend] = computeUmapEmbedding(featuresProc(sampleIdx, :), analysisConfig);
+
+        figure_umap = figure('Name', 'UMAP Scatter', 'Position', [180 180 1000 750]);
+        hold on;
+        for i = 1:numClasses
+            idx = tsneLabels == classes{i};
+            scatter(umapEmbedding(idx, 1), umapEmbedding(idx, 2), 25, colors(i, :), 'filled', ...
+                'DisplayName', strrep(char(classes{i}), '_', ' '));
+        end
+        hold off;
+        grid on;
+        xlabel('UMAP Dimension 1');
+        ylabel('UMAP Dimension 2');
+        title(sprintf('UMAP Projection of Scattering Features (%s backend)', umapBackend));
+        legend('Location', 'bestoutside');
+        saveFigureLocal(figure_umap, 'UMAP_Scatter.png', analysisConfig);
+    catch ME
+        warning('UMAP embedding skipped: %s\nEnsure that a MATLAB or File Exchange UMAP implementation is on the path.', ME.message);
+    end
+end
+
 %% Silhouette analysis (quantitative separability)
 [silhouetteValues, silhFigure] = silhouette(featuresProc, labelCats);
 meanSilhouette = mean(silhouetteValues);
@@ -195,4 +226,48 @@ function saveFigureLocal(figHandle, filename, config)
     fullPath = fullfile(config.figures_dir, filename);
     saveas(figHandle, fullPath);
     fprintf('Figure saved: %s\n', fullPath);
+end
+
+function [embedding, backend] = computeUmapEmbedding(data, config)
+    embedding = [];
+    backend = '';
+
+    if isempty(data)
+        error('UMAP data matrix is empty.');
+    end
+
+    nNeighbors = min(config.umap_n_neighbors, size(data, 1) - 1);
+    nNeighbors = max(nNeighbors, 2);
+
+    if exist('umap', 'file') == 2
+        try
+            embedding = umap(data, ...
+                'NumComponents', config.umap_num_dims, ...
+                'NumNeighbors', nNeighbors, ...
+                'MinDist', config.umap_min_dist, ...
+                'Metric', config.umap_metric);
+            backend = 'umap';
+            return;
+        catch ME
+            warning('Native umap() call failed: %s', ME.message);
+        end
+    end
+
+    if exist('run_umap', 'file') == 2
+        try
+            [embedding, ~] = run_umap(data, ...
+                'n_components', config.umap_num_dims, ...
+                'n_neighbors', nNeighbors, ...
+                'min_dist', config.umap_min_dist, ...
+                'metric', config.umap_metric, ...
+                'verbose', 'text');
+            backend = 'run_umap';
+            return;
+        catch ME
+            warning('run_umap() call failed: %s', ME.message);
+        end
+    end
+
+    error(['No UMAP implementation detected. Install MathWorks'' UMAP support ', ...
+        'or place run_umap.m on the MATLAB path.']);
 end
