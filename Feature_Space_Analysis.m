@@ -1,11 +1,11 @@
 %% =========================================================================
 %  FEATURE SPACE ANALYSIS FOR CRC SCATTERING REPRESENTATIONS
 %  -------------------------------------------------------------------------
-%  This standalone script consumes the saved CRC classification results
+%  This script consumes the saved CRC classification results
 %  (CRC_Classification_Results.mat) and visualizes the learned wavelet
-%  scattering feature space. It demonstrates how tissue classes separate
-%  in high-dimensional space via PCA, t-SNE, and silhouette analysis to
-%  reinforce interpretability claims made in the abstract.
+%  scattering feature space using a one-vs-all t-SNE strategy. Each tissue
+%  class is contrasted against a balanced set of "rest" samples to provide
+%  clear, interpretable 2D and 3D projections of class separability.
 %  -------------------------------------------------------------------------
 
 clear; clc; close all;
@@ -15,17 +15,12 @@ analysisConfig = struct();
 analysisConfig.results_file = 'CRC_Classification_Results.mat';
 analysisConfig.standardize_features = true;
 analysisConfig.random_seed = 7;
-analysisConfig.tsne_max_samples = 2000;
-analysisConfig.tsne_num_dims = 2;
-analysisConfig.tsne_perplexity = 30;
-analysisConfig.tsne_num_pca_components = 50;
+analysisConfig.tsne_max_samples = 400;          % per one-vs-all view (keeps plots readable)
+analysisConfig.tsne_perplexity = 30;            % adjusted per sampled set automatically
+analysisConfig.tsne_num_pca_components = 50;    % PCA pre-reduction inside t-SNE
 analysisConfig.tsne_exaggeration = 5;
 analysisConfig.tsne_learn_rate = 500;
-analysisConfig.enable_umap = true;
-analysisConfig.umap_num_dims = 2;
-analysisConfig.umap_n_neighbors = 15;
-analysisConfig.umap_min_dist = 0.1;
-analysisConfig.umap_metric = 'euclidean';
+analysisConfig.ovr_negatives_per_class = 25;    % cap of negatives drawn per non-target class
 analysisConfig.save_figures = true;
 analysisConfig.figure_format = 'png';
 analysisConfig.figures_dir = fullfile(pwd, 'figures');
@@ -72,120 +67,78 @@ fprintf('Loaded %d feature vectors across %d tissue classes.\n', size(allFeature
 
 %% Optional standardization
 if analysisConfig.standardize_features
-    [featuresProc, featureMu, featureSigma] = zscore(allFeatures);
+    featuresProc = zscore(allFeatures);
 else
     featuresProc = allFeatures;
-    featureMu = mean(allFeatures, 1);
-    featureSigma = std(allFeatures, 0, 1);
 end
 
 fprintf('Feature standardization: %s\n', ternary(analysisConfig.standardize_features, 'enabled', 'disabled'));
+fprintf('Launching one-vs-all t-SNE generation for %d classes.\n', numClasses);
 
-%% PCA analysis
-numPcaComponents = min(10, size(featuresProc, 2));
-[coeff, score, latent, ~, explained] = pca(featuresProc, 'NumComponents', numPcaComponents);
-
-cumExplained = cumsum(explained);
-fprintf('Top 3 PCA components explain %.2f%% of variance.\n', sum(explained(1:min(3, numel(explained)))));
-
+%% One-vs-all t-SNE for every class (2D and 3D)
 colors = lines(numClasses);
 
-figure_pca3d = figure('Name', 'PCA Scatter (3D)', 'Position', [100 100 1000 750]);
-hold on;
-for i = 1:numClasses
-    idx = labelCats == classes{i};
-    scatter3(score(idx, 1), score(idx, 2), score(idx, 3), 36, colors(i, :), 'filled', ...
-        'DisplayName', strrep(char(classes{i}), '_', ' '));
+for classIdx = 1:numClasses
+    targetClass = classes{classIdx};
+
+    % Assemble balanced positives vs. negatives for the current one-vs-all view
+    [ovrFeatures, binaryLabels] = assembleOvrDataset(featuresProc, labelCats, targetClass, analysisConfig);
+    numSamples = size(ovrFeatures, 1);
+    perplexity = computePerplexity(numSamples, analysisConfig.tsne_perplexity);
+
+    fprintf('\nRunning t-SNE for %s vs rest (%d samples | perplexity %d)\n', ...
+        strrep(char(targetClass), '_', ' '), numSamples, perplexity);
+
+    % --- 2D projection ---
+    tsne2d = tsne(ovrFeatures, ...
+        'NumDimensions', 2, ...
+        'Perplexity', perplexity, ...
+        'Exaggeration', analysisConfig.tsne_exaggeration, ...
+        'LearnRate', analysisConfig.tsne_learn_rate, ...
+        'NumPCAComponents', min(analysisConfig.tsne_num_pca_components, size(ovrFeatures, 2)), ...
+        'Standardize', false);
+
+    fig2d = figure('Name', sprintf('t-SNE One-vs-All (2D) - %s', targetClass), ...
+        'Position', [120 120 1000 750]);
+    hold on;
+    scatter(tsne2d(binaryLabels == binaryLabels(1), 1), tsne2d(binaryLabels == binaryLabels(1), 2), ...
+        28, colors(classIdx, :), 'filled', 'DisplayName', strrep(char(targetClass), '_', ' '));
+    scatter(tsne2d(binaryLabels ~= binaryLabels(1), 1), tsne2d(binaryLabels ~= binaryLabels(1), 2), ...
+        28, [0.35 0.35 0.35], 'filled', 'DisplayName', ['Non-', strrep(char(targetClass), '_', ' ')]);
+    hold off;
+    grid on;
+    xlabel('t-SNE Dimension 1');
+    ylabel('t-SNE Dimension 2');
+    title(sprintf('One-vs-All t-SNE (2D): %s vs Rest', strrep(char(targetClass), '_', ' ')));
+    legend('Location', 'bestoutside');
+    saveFigureLocal(fig2d, sprintf('tSNE_OneVsAll_%s_2D', char(targetClass)), analysisConfig);
+
+    % --- 3D projection ---
+    tsne3d = tsne(ovrFeatures, ...
+        'NumDimensions', 3, ...
+        'Perplexity', perplexity, ...
+        'Exaggeration', analysisConfig.tsne_exaggeration, ...
+        'LearnRate', analysisConfig.tsne_learn_rate, ...
+        'NumPCAComponents', min(analysisConfig.tsne_num_pca_components, size(ovrFeatures, 2)), ...
+        'Standardize', false);
+
+    fig3d = figure('Name', sprintf('t-SNE One-vs-All (3D) - %s', targetClass), ...
+        'Position', [150 150 1000 750]);
+    hold on;
+    scatter3(tsne3d(binaryLabels == binaryLabels(1), 1), tsne3d(binaryLabels == binaryLabels(1), 2), tsne3d(binaryLabels == binaryLabels(1), 3), ...
+        28, colors(classIdx, :), 'filled', 'DisplayName', strrep(char(targetClass), '_', ' '));
+    scatter3(tsne3d(binaryLabels ~= binaryLabels(1), 1), tsne3d(binaryLabels ~= binaryLabels(1), 2), tsne3d(binaryLabels ~= binaryLabels(1), 3), ...
+        28, [0.35 0.35 0.35], 'filled', 'DisplayName', ['Non-', strrep(char(targetClass), '_', ' ')]);
+    hold off;
+    grid on;
+    xlabel('t-SNE Dimension 1');
+    ylabel('t-SNE Dimension 2');
+    zlabel('t-SNE Dimension 3');
+    title(sprintf('One-vs-All t-SNE (3D): %s vs Rest', strrep(char(targetClass), '_', ' ')));
+    legend('Location', 'bestoutside');
+    view(45, 25);
+    saveFigureLocal(fig3d, sprintf('tSNE_OneVsAll_%s_3D', char(targetClass)), analysisConfig);
 end
-grid on;
-xlabel('PC 1');
-ylabel('PC 2');
-zlabel('PC 3');
-title('3D PCA Projection of Scattering Features');
-legend('Location', 'bestoutside');
-view(45, 25);
-hold off;
-saveFigureLocal(figure_pca3d, 'PCA_3D_Scatter.png', analysisConfig);
-
-figure_pcaExplained = figure('Name', 'PCA Explained Variance', 'Position', [200 150 900 500]);
-plot(1:numel(cumExplained), cumExplained, '-o', 'LineWidth', 1.5);
-xlabel('Number of Principal Components');
-ylabel('Cumulative Variance Explained (%)');
-title('Cumulative Explained Variance of PCA');
-grid on;
-ylim([0 100]);
-saveFigureLocal(figure_pcaExplained, 'PCA_Cumulative_Variance.png', analysisConfig);
-
-%% t-SNE embedding
-numSamples = min(analysisConfig.tsne_max_samples, size(featuresProc, 1));
-if numSamples < size(featuresProc, 1)
-    sampleIdx = randperm(size(featuresProc, 1), numSamples);
-else
-    sampleIdx = 1:size(featuresProc, 1);
-end
-
-tsneLabels = labelCats(sampleIdx);
-perplexity = min(analysisConfig.tsne_perplexity, floor((numSamples - 1) / 3));
-perplexity = max(perplexity, 5);  % ensure valid range
-
-fprintf('Running t-SNE on %d samples with perplexity %d...\n', numel(sampleIdx), perplexity);
-
-tsneEmbedding = tsne(featuresProc(sampleIdx, :), ...
-    'NumDimensions', analysisConfig.tsne_num_dims, ...
-    'Perplexity', perplexity, ...
-    'Exaggeration', analysisConfig.tsne_exaggeration, ...
-    'LearnRate', analysisConfig.tsne_learn_rate, ...
-    'NumPCAComponents', min(analysisConfig.tsne_num_pca_components, size(featuresProc, 2)), ...
-    'Standardize', false);
-
-figure_tsne = figure('Name', 't-SNE Scatter', 'Position', [150 150 1000 750]);
-hold on;
-for i = 1:numClasses
-    idx = tsneLabels == classes{i};
-    scatter(tsneEmbedding(idx, 1), tsneEmbedding(idx, 2), 25, colors(i, :), 'filled', ...
-        'DisplayName', strrep(char(classes{i}), '_', ' '));
-end
-hold off;
-grid on;
-xlabel('t-SNE Dimension 1');
-ylabel('t-SNE Dimension 2');
-title('t-SNE Projection of Scattering Features');
-legend('Location', 'bestoutside');
-saveFigureLocal(figure_tsne, 'tSNE_Scatter.png', analysisConfig);
-
-%% UMAP embedding (optional)
-if analysisConfig.enable_umap
-    fprintf('Running UMAP on %d samples (n\\_neighbors = %d, min\\_dist = %.3f)...\n', ...
-        numel(sampleIdx), analysisConfig.umap_n_neighbors, analysisConfig.umap_min_dist);
-    try
-        [umapEmbedding, umapBackend] = computeUmapEmbedding(featuresProc(sampleIdx, :), analysisConfig);
-
-        figure_umap = figure('Name', 'UMAP Scatter', 'Position', [180 180 1000 750]);
-        hold on;
-        for i = 1:numClasses
-            idx = tsneLabels == classes{i};
-            scatter(umapEmbedding(idx, 1), umapEmbedding(idx, 2), 25, colors(i, :), 'filled', ...
-                'DisplayName', strrep(char(classes{i}), '_', ' '));
-        end
-        hold off;
-        grid on;
-        xlabel('UMAP Dimension 1');
-        ylabel('UMAP Dimension 2');
-        title(sprintf('UMAP Projection of Scattering Features (%s backend)', umapBackend));
-        legend('Location', 'bestoutside');
-        saveFigureLocal(figure_umap, 'UMAP_Scatter.png', analysisConfig);
-    catch ME
-        warning('UMAP embedding skipped: %s\nEnsure that a MATLAB or File Exchange UMAP implementation is on the path.', ME.message);
-    end
-end
-
-%% Silhouette analysis (quantitative separability)
-[silhouetteValues, silhFigure] = silhouette(featuresProc, labelCats);
-meanSilhouette = mean(silhouetteValues);
-title(sprintf('Silhouette Plot (Mean = %.3f)', meanSilhouette));
-saveFigureLocal(silhFigure, 'Silhouette_Plot.png', analysisConfig);
-
-fprintf('Mean silhouette coefficient: %.3f (higher indicates better separation).\n', meanSilhouette);
 
 %% Summary
 fprintf('\nFEATURE SPACE SUMMARY\n');
@@ -193,9 +146,7 @@ fprintf('-------------------------------------------------------------\n');
 fprintf('Samples analyzed : %d\n', size(featuresProc, 1));
 fprintf('Feature dimension: %d\n', size(featuresProc, 2));
 fprintf('Classes          : %s\n', strjoin(strrep(classes', '_', ' '), ', '));
-fprintf('PCA (3 comps)    : %.2f%% variance captured.\n', sum(explained(1:min(3, numel(explained)))));
-fprintf('t-SNE perplexity : %d with %d samples.\n', perplexity, numel(sampleIdx));
-fprintf('Mean silhouette  : %.3f\n', meanSilhouette);
+fprintf('t-SNE views      : %d one-vs-all (2D) and %d one-vs-all (3D).\n', numClasses, numClasses);
 fprintf('Figures saved to : %s\n', analysisConfig.figures_dir);
 fprintf('-------------------------------------------------------------\n');
 
@@ -206,6 +157,71 @@ function result = ternary(condition, trueString, falseString)
     else
         result = falseString;
     end
+end
+
+function [ovrFeatures, binaryLabels] = assembleOvrDataset(features, labels, targetClass, config)
+% assembleOvrDataset Balanced positive vs. negative sampling for one-vs-all
+%   features    : standardized feature matrix (N x D)
+%   labels      : categorical labels of length N
+%   targetClass : categorical scalar for the positive class
+%   config      : struct with tsne_max_samples and ovr_negatives_per_class
+
+    positiveIdx = find(labels == targetClass);
+    if isempty(positiveIdx)
+        error('No positive samples found for class "%s".', char(targetClass));
+    end
+
+    otherClasses = setdiff(categories(labels), {targetClass});
+    negativePool = [];
+
+    % Collect a limited number of negatives from each non-target class
+    for i = 1:numel(otherClasses)
+        classIdx = find(labels == otherClasses{i});
+        perClassSample = min(config.ovr_negatives_per_class, numel(classIdx));
+        if perClassSample > 0
+            negativePool = [negativePool; datasample(classIdx, perClassSample, 'Replace', false)]; %#ok<AGROW>
+        end
+    end
+
+    % If needed, top up with remaining negatives to balance positives
+    remainingNegatives = setdiff(find(labels ~= targetClass), negativePool);
+    if numel(negativePool) < numel(positiveIdx) && ~isempty(remainingNegatives)
+        fillCount = min(numel(positiveIdx) - numel(negativePool), numel(remainingNegatives));
+        negativePool = [negativePool; datasample(remainingNegatives, fillCount, 'Replace', false)]; %#ok<AGROW>
+    end
+
+    if isempty(negativePool)
+        error('No negative samples found for class "%s".', char(targetClass));
+    end
+
+    % Balance counts and enforce overall sample cap
+    maxPerSide = floor(config.tsne_max_samples / 2);
+    posCount = min(numel(positiveIdx), maxPerSide);
+    negCount = min(numel(negativePool), maxPerSide);
+    balancedCount = min(posCount, negCount);
+
+    if balancedCount < 2
+        error('Not enough balanced samples to plot %s vs rest (have %d).', char(targetClass), balancedCount);
+    end
+
+    posSample = datasample(positiveIdx, balancedCount, 'Replace', false);
+    negSample = datasample(negativePool, balancedCount, 'Replace', false);
+
+    combinedIdx = [posSample; negSample];
+    combinedLabels = categorical([repmat({strrep(char(targetClass), '_', ' ')}, balancedCount, 1); ...
+        repmat({['Non-', strrep(char(targetClass), '_', ' ')]}, balancedCount, 1)]);
+
+    % Shuffle to avoid ordering effects in visualization
+    shuffleOrder = randperm(numel(combinedIdx));
+    ovrFeatures = features(combinedIdx(shuffleOrder), :);
+    binaryLabels = combinedLabels(shuffleOrder);
+end
+
+function perplexity = computePerplexity(numSamples, basePerplexity)
+% computePerplexity Clamp perplexity to valid bounds for the sampled set
+    maxAllowed = max(floor((numSamples - 1) / 3), 1);
+    perplexity = min(basePerplexity, maxAllowed);
+    perplexity = max(perplexity, min(5, maxAllowed));
 end
 
 function saveFigureLocal(figHandle, filename, config)
@@ -226,48 +242,4 @@ function saveFigureLocal(figHandle, filename, config)
     fullPath = fullfile(config.figures_dir, filename);
     saveas(figHandle, fullPath);
     fprintf('Figure saved: %s\n', fullPath);
-end
-
-function [embedding, backend] = computeUmapEmbedding(data, config)
-    embedding = [];
-    backend = '';
-
-    if isempty(data)
-        error('UMAP data matrix is empty.');
-    end
-
-    nNeighbors = min(config.umap_n_neighbors, size(data, 1) - 1);
-    nNeighbors = max(nNeighbors, 2);
-
-    if exist('umap', 'file') == 2
-        try
-            embedding = umap(data, ...
-                'NumComponents', config.umap_num_dims, ...
-                'NumNeighbors', nNeighbors, ...
-                'MinDist', config.umap_min_dist, ...
-                'Metric', config.umap_metric);
-            backend = 'umap';
-            return;
-        catch ME
-            warning('Native umap() call failed: %s', ME.message);
-        end
-    end
-
-    if exist('run_umap', 'file') == 2
-        try
-            [embedding, ~] = run_umap(data, ...
-                'n_components', config.umap_num_dims, ...
-                'n_neighbors', nNeighbors, ...
-                'min_dist', config.umap_min_dist, ...
-                'metric', config.umap_metric, ...
-                'verbose', 'text');
-            backend = 'run_umap';
-            return;
-        catch ME
-            warning('run_umap() call failed: %s', ME.message);
-        end
-    end
-
-    error(['No UMAP implementation detected. Install MathWorks'' UMAP support ', ...
-        'or place run_umap.m on the MATLAB path.']);
 end
