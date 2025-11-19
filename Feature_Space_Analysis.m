@@ -2,7 +2,7 @@
 %  FEATURE SPACE ANALYSIS FOR CRC SCATTERING REPRESENTATIONS
 %  -------------------------------------------------------------------------
 %  This script consumes the saved CRC classification results
-%  (CRC_Classification_Results.mat) and visualizes the learned wavelet
+%  (CRC_Classification_Results.mat) and visualizes the wavelet
 %  scattering feature space using a one-vs-all t-SNE strategy. Each tissue
 %  class is contrasted against a balanced set of "rest" samples drawn only
 %  from the held-out test split to provide clear, interpretable 2D
