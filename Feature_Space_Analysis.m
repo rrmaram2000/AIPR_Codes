@@ -4,8 +4,9 @@
 %  This script consumes the saved CRC classification results
 %  (CRC_Classification_Results.mat) and visualizes the learned wavelet
 %  scattering feature space using a one-vs-all t-SNE strategy. Each tissue
-%  class is contrasted against a balanced set of "rest" samples to provide
-%  clear, interpretable 2D and 3D projections of class separability.
+%  class is contrasted against a balanced set of "rest" samples drawn only
+%  from the held-out test split to provide clear, interpretable 2D
+%  projections of class separability.
 %  -------------------------------------------------------------------------
 
 clear; clc; close all;
@@ -15,12 +16,11 @@ analysisConfig = struct();
 analysisConfig.results_file = 'CRC_Classification_Results.mat';
 analysisConfig.standardize_features = true;
 analysisConfig.random_seed = 7;
-analysisConfig.tsne_max_samples = 400;          % per one-vs-all view (keeps plots readable)
-analysisConfig.tsne_perplexity = 30;            % adjusted per sampled set automatically
+analysisConfig.samples_per_side = 125;          % positives + negatives drawn from test split
+analysisConfig.tsne_perplexity = 20;            % tuned for ~250 samples (focus on local clusters)
 analysisConfig.tsne_num_pca_components = 50;    % PCA pre-reduction inside t-SNE
-analysisConfig.tsne_exaggeration = 5;
-analysisConfig.tsne_learn_rate = 500;
-analysisConfig.ovr_negatives_per_class = 25;    % cap of negatives drawn per non-target class
+analysisConfig.tsne_exaggeration = 12;          % stronger early exaggeration for cleaner separation
+analysisConfig.tsne_learn_rate = 1000;
 analysisConfig.save_figures = true;
 analysisConfig.figure_format = 'png';
 analysisConfig.figures_dir = fullfile(pwd, 'figures');
@@ -44,13 +44,11 @@ for i = 1:numel(requiredFields)
 end
 
 %% Assemble feature matrix and labels
-trainFeatures = double(results.trainfeatures);
 testFeatures = double(results.testfeatures);
-allFeatures = [trainFeatures; testFeatures];
+allFeatures = testFeatures;
 
-trainLabels = results.trainImds.Labels;
 testLabels = results.testImds.Labels;
-allLabels = [trainLabels; testLabels];
+allLabels = testLabels;
 
 if isempty(allFeatures)
     error('Feature matrix is empty. Ensure that feature extraction succeeded.');
@@ -63,7 +61,7 @@ labelCats = categorical(cleanLabelStrings);
 classes = categories(labelCats);
 numClasses = numel(classes);
 
-fprintf('Loaded %d feature vectors across %d tissue classes.\n', size(allFeatures, 1), numClasses);
+fprintf('Loaded %d test feature vectors across %d tissue classes.\n', size(allFeatures, 1), numClasses);
 
 %% Optional standardization
 if analysisConfig.standardize_features
@@ -75,19 +73,19 @@ end
 fprintf('Feature standardization: %s\n', ternary(analysisConfig.standardize_features, 'enabled', 'disabled'));
 fprintf('Launching one-vs-all t-SNE generation for %d classes.\n', numClasses);
 
-%% One-vs-all t-SNE for every class (2D and 3D)
+%% One-vs-all t-SNE for every class (2D)
 colors = lines(numClasses);
 
 for classIdx = 1:numClasses
     targetClass = classes{classIdx};
 
     % Assemble balanced positives vs. negatives for the current one-vs-all view
-    [ovrFeatures, binaryLabels] = assembleOvrDataset(featuresProc, labelCats, targetClass, analysisConfig);
+    [ovrFeatures, binaryLabels, sampleStats] = assembleOvrDataset(featuresProc, labelCats, targetClass, analysisConfig);
     numSamples = size(ovrFeatures, 1);
     perplexity = computePerplexity(numSamples, analysisConfig.tsne_perplexity);
 
-    fprintf('\nRunning t-SNE for %s vs rest (%d samples | perplexity %d)\n', ...
-        strrep(char(targetClass), '_', ' '), numSamples, perplexity);
+    fprintf('\nRunning t-SNE for %s vs rest (%d pos | %d rest | perplexity %d)\n', ...
+        strrep(char(targetClass), '_', ' '), sampleStats.positiveCount, sampleStats.negativeCount, perplexity);
 
     % --- 2D projection ---
     tsne2d = tsne(ovrFeatures, ...
@@ -112,32 +110,6 @@ for classIdx = 1:numClasses
     title(sprintf('One-vs-All t-SNE (2D): %s vs Rest', strrep(char(targetClass), '_', ' ')));
     legend('Location', 'bestoutside');
     saveFigureLocal(fig2d, sprintf('tSNE_OneVsAll_%s_2D', char(targetClass)), analysisConfig);
-
-    % --- 3D projection ---
-    tsne3d = tsne(ovrFeatures, ...
-        'NumDimensions', 3, ...
-        'Perplexity', perplexity, ...
-        'Exaggeration', analysisConfig.tsne_exaggeration, ...
-        'LearnRate', analysisConfig.tsne_learn_rate, ...
-        'NumPCAComponents', min(analysisConfig.tsne_num_pca_components, size(ovrFeatures, 2)), ...
-        'Standardize', false);
-
-    fig3d = figure('Name', sprintf('t-SNE One-vs-All (3D) - %s', targetClass), ...
-        'Position', [150 150 1000 750]);
-    hold on;
-    scatter3(tsne3d(binaryLabels == binaryLabels(1), 1), tsne3d(binaryLabels == binaryLabels(1), 2), tsne3d(binaryLabels == binaryLabels(1), 3), ...
-        28, colors(classIdx, :), 'filled', 'DisplayName', strrep(char(targetClass), '_', ' '));
-    scatter3(tsne3d(binaryLabels ~= binaryLabels(1), 1), tsne3d(binaryLabels ~= binaryLabels(1), 2), tsne3d(binaryLabels ~= binaryLabels(1), 3), ...
-        28, [0.35 0.35 0.35], 'filled', 'DisplayName', ['Non-', strrep(char(targetClass), '_', ' ')]);
-    hold off;
-    grid on;
-    xlabel('t-SNE Dimension 1');
-    ylabel('t-SNE Dimension 2');
-    zlabel('t-SNE Dimension 3');
-    title(sprintf('One-vs-All t-SNE (3D): %s vs Rest', strrep(char(targetClass), '_', ' ')));
-    legend('Location', 'bestoutside');
-    view(45, 25);
-    saveFigureLocal(fig3d, sprintf('tSNE_OneVsAll_%s_3D', char(targetClass)), analysisConfig);
 end
 
 %% Summary
@@ -146,7 +118,7 @@ fprintf('-------------------------------------------------------------\n');
 fprintf('Samples analyzed : %d\n', size(featuresProc, 1));
 fprintf('Feature dimension: %d\n', size(featuresProc, 2));
 fprintf('Classes          : %s\n', strjoin(strrep(classes', '_', ' '), ', '));
-fprintf('t-SNE views      : %d one-vs-all (2D) and %d one-vs-all (3D).\n', numClasses, numClasses);
+fprintf('t-SNE views      : %d one-vs-all (2D, test split only).\n', numClasses);
 fprintf('Figures saved to : %s\n', analysisConfig.figures_dir);
 fprintf('-------------------------------------------------------------\n');
 
@@ -159,62 +131,70 @@ function result = ternary(condition, trueString, falseString)
     end
 end
 
-function [ovrFeatures, binaryLabels] = assembleOvrDataset(features, labels, targetClass, config)
+function [ovrFeatures, binaryLabels, sampleStats] = assembleOvrDataset(features, labels, targetClass, config)
 % assembleOvrDataset Balanced positive vs. negative sampling for one-vs-all
-%   features    : standardized feature matrix (N x D)
-%   labels      : categorical labels of length N
-%   targetClass : categorical scalar for the positive class
-%   config      : struct with tsne_max_samples and ovr_negatives_per_class
+%   features       : standardized feature matrix (N x D)
+%   labels         : categorical labels of length N
+%   targetClass    : categorical scalar for the positive class
+%   config         : struct with samples_per_side (requested positives + negatives)
 
     positiveIdx = find(labels == targetClass);
+    negativeIdx = find(labels ~= targetClass);
+
     if isempty(positiveIdx)
         error('No positive samples found for class "%s".', char(targetClass));
     end
 
-    otherClasses = setdiff(categories(labels), {targetClass});
-    negativePool = [];
-
-    % Collect a limited number of negatives from each non-target class
-    for i = 1:numel(otherClasses)
-        classIdx = find(labels == otherClasses{i});
-        perClassSample = min(config.ovr_negatives_per_class, numel(classIdx));
-        if perClassSample > 0
-            negativePool = [negativePool; datasample(classIdx, perClassSample, 'Replace', false)]; %#ok<AGROW>
-        end
-    end
-
-    % If needed, top up with remaining negatives to balance positives
-    remainingNegatives = setdiff(find(labels ~= targetClass), negativePool);
-    if numel(negativePool) < numel(positiveIdx) && ~isempty(remainingNegatives)
-        fillCount = min(numel(positiveIdx) - numel(negativePool), numel(remainingNegatives));
-        negativePool = [negativePool; datasample(remainingNegatives, fillCount, 'Replace', false)]; %#ok<AGROW>
-    end
-
-    if isempty(negativePool)
+    if isempty(negativeIdx)
         error('No negative samples found for class "%s".', char(targetClass));
     end
 
-    % Balance counts and enforce overall sample cap
-    maxPerSide = floor(config.tsne_max_samples / 2);
-    posCount = min(numel(positiveIdx), maxPerSide);
-    negCount = min(numel(negativePool), maxPerSide);
-    balancedCount = min(posCount, negCount);
+    posCount = min(numel(positiveIdx), config.samples_per_side);
+    negCount = min(numel(negativeIdx), config.samples_per_side);
 
-    if balancedCount < 2
-        error('Not enough balanced samples to plot %s vs rest (have %d).', char(targetClass), balancedCount);
+    if posCount < 2 || negCount < 2
+        error('Not enough samples to plot %s vs rest (pos=%d, neg=%d).', char(targetClass), posCount, negCount);
     end
 
-    posSample = datasample(positiveIdx, balancedCount, 'Replace', false);
-    negSample = datasample(negativePool, balancedCount, 'Replace', false);
+    posSample = datasample(positiveIdx, posCount, 'Replace', false);
+    negSample = balanceNegatives(negativeIdx, labels, targetClass, negCount);
 
     combinedIdx = [posSample; negSample];
-    combinedLabels = categorical([repmat({strrep(char(targetClass), '_', ' ')}, balancedCount, 1); ...
-        repmat({['Non-', strrep(char(targetClass), '_', ' ')]}, balancedCount, 1)]);
+    combinedLabels = categorical([repmat({strrep(char(targetClass), '_', ' ')}, numel(posSample), 1); ...
+        repmat({['Non-', strrep(char(targetClass), '_', ' ')]}, numel(negSample), 1)]);
 
     % Shuffle to avoid ordering effects in visualization
     shuffleOrder = randperm(numel(combinedIdx));
     ovrFeatures = features(combinedIdx(shuffleOrder), :);
     binaryLabels = combinedLabels(shuffleOrder);
+
+    sampleStats = struct('positiveCount', numel(posSample), 'negativeCount', numel(negSample));
+end
+
+function negSample = balanceNegatives(negativeIdx, labels, targetClass, requestedCount)
+% balanceNegatives encourage a roughly even draw across non-target classes
+    otherClasses = setdiff(categories(labels), {targetClass});
+    perClassQuota = max(floor(requestedCount / numel(otherClasses)), 1);
+    negSample = [];
+
+    for i = 1:numel(otherClasses)
+        classIdx = negativeIdx(labels(negativeIdx) == otherClasses{i});
+        take = min(perClassQuota, numel(classIdx));
+        if take > 0
+            negSample = [negSample; datasample(classIdx, take, 'Replace', false)]; %#ok<AGROW>
+        end
+    end
+
+    % If quota per class did not fill the requested slots, top up randomly
+    remainingSlots = requestedCount - numel(negSample);
+    if remainingSlots > 0
+        remainingIdx = setdiff(negativeIdx, negSample);
+        topUp = min(remainingSlots, numel(remainingIdx));
+        negSample = [negSample; datasample(remainingIdx, topUp, 'Replace', false)]; %#ok<AGROW>
+    end
+
+    % Ensure we do not exceed available negatives
+    negSample = negSample(1:min(requestedCount, numel(negSample)));
 end
 
 function perplexity = computePerplexity(numSamples, basePerplexity)
