@@ -319,9 +319,10 @@ function meta = deriveWaveletMetadata(orderIdx, waveletVolume, filterParams, con
     end
 
     if isempty(scaleLabels)
-        scaleLabels = arrayfun(@(v) sprintf('%d', v), numScales:-1:1, 'UniformOutput', false);
+        scaleLabels = arrayfun(@(idx) sprintf('%d', idx), 1:numScales, 'UniformOutput', false);
     else
-        scaleLabels = arrayfun(@(v) sprintf('%.2f', v), scaleLabels, 'UniformOutput', false);
+        % Map supplied scale metadata to ordinal labels (1=highest frequency)
+        scaleLabels = arrayfun(@(idx) sprintf('%d', idx), 1:numScales, 'UniformOutput', false);
     end
 
     meta = struct('numAngles', numAngles, 'numScales', numScales, ...
