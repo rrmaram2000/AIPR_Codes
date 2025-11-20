@@ -1,4 +1,4 @@
-%% SCATTERING_PATH_ANALYSIS_FINAL
+%%  SCATTERING_PATH_ANALYSIS_FINAL
 %   Generate a descriptive table of scattering paths for the CRC scattering
 %   network, summarize scale/rotation metadata, optionally save results, and
 %   provide guidance on typical queries.
@@ -9,8 +9,7 @@
 %     3. Build a consolidated table with per-path frequency/scale/rotation info.
 %     4. Display summary statistics and usage examples.
 %     5. Save the artifacts to the "wavelet_scattering_paths" folder.
-%
-%   The code avoids decorative output and focuses on reproducible results.
+%     Note: This script requires the Wavelet Toolbox.
 
 clear; clc; close all;
 
@@ -223,39 +222,5 @@ function saveScatteringPaths(folder, scatteringPaths, pathTable, waveletInfo, nu
     fprintf('\nResults saved to %s (MAT) and %s (CSV)\n', matFile, csvFile);
 end
 
-function cropped = cropCenter(img, targetSize)
-%CROPCENTER Extract centered square crop with specified size.
-    [h, w] = size(img);
-    targetSize = min([targetSize, h, w]);
-    r0 = floor((h - targetSize) / 2) + 1;
-    c0 = floor((w - targetSize) / 2) + 1;
-    cropped = img(r0:r0 + targetSize - 1, c0:c0 + targetSize - 1);
-end
 
-function [height, width] = estimateSupportSize(kernel, threshold)
-%ESTIMATESUPPORTSIZE Bounding box of magnitudes >= threshold.
-    if nargin < 2 || isempty(threshold)
-        threshold = 0.05;
-    end
-    magnitude = abs(kernel);
-    maxVal = max(magnitude(:));
-    if maxVal == 0
-        height = 0;
-        width = 0;
-        return;
-    end
-    mask = magnitude / maxVal >= threshold;
-    [rows, cols] = find(mask);
-    if isempty(rows)
-        height = 0;
-        width = 0;
-        return;
-    end
-    height = max(rows) - min(rows) + 1;
-    width = max(cols) - min(cols) + 1;
-end
 
-function spatialKernel = toSpatialKernel(freqKernel)
-%TOSPATIALKERNEL Convert Fourier-domain filter to spatial domain.
-    spatialKernel = ifftshift(ifft2(ifftshift(freqKernel)));
-end
