@@ -1,0 +1,233 @@
+% Plot 2D Morlet Wavelet Filters
+% ==============================
+% This script generates and visualizes 2D Morlet wavelet filters
+% for J = 0 (lambda_1 = 1) and J = 1 (lambda_1 = 2)
+% with 6 angles evenly spaced between [0, pi)
+%
+% Based on the MATLAB waveletScattering2 framework
+% See: https://www.mathworks.com/help/wavelet/ref/waveletscattering2.html
+
+%% Initial parameters
+% Image size
+imageSize = [128, 128];
+
+% Number of scales (J = 2 means we get j = 0 and j = 1)
+J = 2;
+
+% Number of angles (6 angles evenly spaced between [0, pi))
+numAngles = 6;
+
+%% Create wavelet scattering network
+% Create the scattering network with specified parameters
+sf = waveletScattering2('ImageSize', imageSize, ...
+                        'NumRotations', numAngles, ...
+                        'QualityFactors', 1);
+
+%% Extract filter bank
+% Get the wavelet filters from the scattering network
+[phif, psifilters, f, filterparams] = filterbank(sf);
+
+%% Prepare visualization
+% The first filter bank contains wavelets at different scales and angles
+psi = psifilters{1};  % Get first filter bank (3D array: M x N x L)
+
+% Number of filters (should be J * numAngles)
+numFilters = size(psi, 3);
+
+% Angles in radians
+angles = linspace(0, pi, numAngles + 1);
+angles = angles(1:numAngles);  % Remove the endpoint (not including pi)
+
+%% Display wavelets using complex phase coloring
+figure('Position', [100, 100, 1400, 600]);
+
+% Determine zoom region (central region of image for better visibility)
+[M, N] = size(psi(:,:,1));
+zoom_size = round(min(M, N) * 0.15);  % Zoom to 15% - much tighter crop
+center = [round(M/2), round(N/2)];
+row_range = (center(1) - zoom_size):(center(1) + zoom_size);
+col_range = (center(2) - zoom_size):(center(2) + zoom_size);
+
+for k = 1:numFilters
+    % Get the current filter in frequency domain
+    psi_f = psi(:, :, k);
+
+    % Transform to spatial domain (following Python example approach)
+    psi_spatial = ifft2(psi_f);
+    psi_spatial = fftshift(psi_spatial);
+
+    % Zoom in on the central region
+    psi_zoomed = psi_spatial(row_range, col_range);
+
+    % Determine scale j and angle index
+    j = floor((k - 1) / numAngles);
+    theta_idx = mod(k - 1, numAngles);
+
+    % Calculate lambda_1 = 2^j
+    lambda_1 = 2^j;
+
+    % Create subplot
+    subplot(J, numAngles, k);
+
+    % Colorize and display the complex wavelet
+    rgb = colorize(psi_zoomed);
+    imshow(rgb);
+    axis image off;
+
+    % Add title with lambda and angle in degrees
+    angle_deg = angles(theta_idx + 1) * 180 / pi;
+    title(sprintf('\\lambda_1 = %d\n\\theta = %d°', lambda_1, round(angle_deg)), ...
+          'FontSize', 11, 'FontWeight', 'bold');
+end
+
+sgtitle('Wavelets for each scale j and angle \theta', 'FontSize', 14, 'FontWeight', 'bold');
+annotation('textbox', [0, 0, 1, 0.05], 'String', ...
+    'Color hue denotes complex phase, lightness denotes inverse magnitude', ...
+    'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', ...
+    'FontSize', 10, 'EdgeColor', 'none');
+
+%% Display magnitude of wavelets
+figure('Position', [100, 100, 1400, 600]);
+
+for k = 1:numFilters
+    % Get the current filter in frequency domain
+    psi_f = psi(:, :, k);
+
+    % Transform to spatial domain (following Python example approach)
+    psi_spatial = ifft2(psi_f);
+    psi_spatial = fftshift(psi_spatial);
+
+    % Zoom in on the central region
+    psi_zoomed = psi_spatial(row_range, col_range);
+
+    % Determine scale j and angle index
+    j = floor((k - 1) / numAngles);
+    theta_idx = mod(k - 1, numAngles);
+
+    % Calculate lambda_1 = 2^j
+    lambda_1 = 2^j;
+
+    % Create subplot
+    subplot(J, numAngles, k);
+
+    % Visualize the magnitude with enhanced contrast
+    mag = abs(psi_zoomed);
+    mag = mag / max(mag(:));  % Normalize
+
+    imagesc(mag);
+    colormap(hot);
+    axis image off;
+    caxis([0 1]);  % Fixed color scale
+
+    % Add title with lambda and angle in degrees
+    angle_deg = angles(theta_idx + 1) * 180 / pi;
+    title(sprintf('\\lambda_1 = %d\n\\theta = %d°', lambda_1, round(angle_deg)), ...
+          'FontSize', 11, 'FontWeight', 'bold');
+end
+
+sgtitle('2D Morlet Wavelet Filters: Magnitude', 'FontSize', 14, 'FontWeight', 'bold');
+
+%% Display the scaling function (low-pass filter)
+figure('Position', [100, 100, 600, 500]);
+
+% Transform scaling filter to spatial domain
+phi_spatial = ifft2(phif);
+phi_spatial = fftshift(phi_spatial);
+
+% Zoom in on scaling function too
+phi_zoomed = phi_spatial(row_range, col_range);
+
+imagesc(abs(phi_zoomed));
+colormap(gray);
+colorbar;
+axis image;
+title('Scaling Function (Low-pass Filter)', 'FontSize', 14, 'FontWeight', 'bold');
+
+%% Print filter information
+fprintf('\n=== Filter Bank Information ===\n');
+fprintf('Image Size: %d x %d\n', imageSize(1), imageSize(2));
+fprintf('Number of Scales (J): %d\n', J);
+fprintf('Number of Angles: %d\n', numAngles);
+fprintf('Total Number of Wavelets: %d\n', numFilters);
+fprintf('\nAngles (in radians): ');
+fprintf('%.4f ', angles);
+fprintf('\n\nAngles (as fractions of pi): ');
+fprintf('%.4f*pi ', angles/pi);
+fprintf('\n');
+
+% Display filter parameters from the first few filters
+fprintf('\n=== Sample Filter Parameters ===\n');
+if ~isempty(filterparams) && istable(filterparams{1})
+    disp(filterparams{1}(1:min(12, height(filterparams{1})), :));
+end
+
+%% Local helper functions
+
+% Colorize complex wavelets
+% Converts complex wavelet to RGB image where:
+% - Hue represents complex phase
+% - Lightness represents inverse magnitude
+function rgb = colorize(im)
+    % Normalize to have largest magnitude one
+    max_val = max(abs(im(:)));
+    if max_val > 0
+        im = im / max_val;
+    end
+
+    % Use complex phase to determine hue (between 0 and 1)
+    H = (angle(im) + pi) / (2 * pi);
+    H = mod(H + 0.5, 1.0);
+
+    % Use magnitude to determine lightness (inverse relationship)
+    % Higher magnitude = darker (lower lightness)
+    L = 1.0 ./ (1.0 + abs(im).^0.3);
+
+    % Saturation (constant high saturation for vivid colors)
+    S = 0.8 * ones(size(im));
+
+    % Convert HLS to RGB (MATLAB uses HSV, so we need to adapt)
+    % For HLS-like behavior, we'll use a custom conversion
+    rgb = zeros([size(im), 3]);
+    for i = 1:size(im, 1)
+        for j = 1:size(im, 2)
+            rgb(i, j, :) = hls_to_rgb(H(i,j), L(i,j), S(i,j));
+        end
+    end
+end
+
+% Helper function to convert HLS to RGB
+function rgb = hls_to_rgb(h, l, s)
+    % Simplified HLS to RGB conversion
+    % This mimics Python's colorsys.hls_to_rgb
+    if s == 0
+        rgb = [l, l, l];
+        return;
+    end
+
+    if l <= 0.5
+        m2 = l * (1 + s);
+    else
+        m2 = l + s - l * s;
+    end
+    m1 = 2 * l - m2;
+
+    r = hue_to_rgb(m1, m2, h + 1/3);
+    g = hue_to_rgb(m1, m2, h);
+    b = hue_to_rgb(m1, m2, h - 1/3);
+
+    rgb = [r, g, b];
+end
+
+% Helper function for HLS to RGB conversion
+function val = hue_to_rgb(m1, m2, hue)
+    hue = mod(hue, 1.0);
+    if hue < 1/6
+        val = m1 + (m2 - m1) * hue * 6;
+    elseif hue < 0.5
+        val = m2;
+    elseif hue < 2/3
+        val = m1 + (m2 - m1) * (2/3 - hue) * 6;
+    else
+        val = m1;
+    end
+end
