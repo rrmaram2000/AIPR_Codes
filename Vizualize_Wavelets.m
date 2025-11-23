@@ -14,10 +14,12 @@
 %
 % Outputs
 %    Plots: colorized wavelets, magnitude maps, and scaling function. Prints
-%    basic filter information to the command window.
+%    basic filter information to the command window and saves it to a text file.
 %
 % Requirements
 %    Wavelet Toolbox (waveletScattering2), MATLAB R2020b or later recommended.
+%    A MATLAB version of ploting filters based on the PyTorch based wavelet scattering kymatio.
+%    For Python based routines, refer:  https://www.kymat.io/
 %
 % Examples
 %    Run the script:
@@ -48,8 +50,9 @@ numAngles = 6;
 %% Create wavelet scattering network
 % Create the scattering network with specified parameters
 sf = waveletScattering2('ImageSize', imageSize, ...
-                        'NumRotations', numAngles, ...
-                        'QualityFactors', 1);
+                        'NumRotations', [numAngles,numAngles], ...
+                        'InvarianceScale', 5*2^J, ...
+                        'QualityFactors', [1,1]);
 
 %% Extract filter bank
 % Get the wavelet filters from the scattering network
@@ -109,70 +112,23 @@ for k = 1:numFilters
           'FontSize', 11, 'FontWeight', 'bold');
 end
 
-sgtitle('Wavelets for each scale j and angle \theta', 'FontSize', 14, 'FontWeight', 'bold');
-annotation('textbox', [0, 0, 1, 0.05], 'String', ...
-    'Color hue denotes complex phase, lightness denotes inverse magnitude', ...
-    'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', ...
-    'FontSize', 10, 'EdgeColor', 'none');
-
-%% Display magnitude of wavelets
-% Show normalized magnitudes with a consistent color scale for comparison
-figure('Position', [100, 100, 1400, 600]);
-
-for k = 1:numFilters
-    % Get the current filter in frequency domain
-    psi_f = psi(:, :, k);
-
-    % Transform to spatial domain (following Python example approach)
-    psi_spatial = ifft2(psi_f);
-    psi_spatial = fftshift(psi_spatial);
-
-    % Zoom in on the central region
-    psi_zoomed = psi_spatial(row_range, col_range);
-
-    % Determine scale j and angle index
-    j = floor((k - 1) / numAngles);
-    theta_idx = mod(k - 1, numAngles);
-
-    % Calculate lambda_1 = 2^j
-    lambda_1 = 2^j;
-
-    % Create subplot
-    subplot(J, numAngles, k);
-
-    % Visualize the magnitude with enhanced contrast
-    mag = abs(psi_zoomed);
-    mag = mag / max(mag(:));  % Normalize
-
-    imagesc(mag);
-    colormap(hot);
-    axis image off;
-    caxis([0 1]);  % Fixed color scale
-
-    % Add title with lambda and angle in degrees
-    angle_deg = angles(theta_idx + 1) * 180 / pi;
-    title(sprintf('\\lambda_1 = %d\n\\theta = %d°', lambda_1, round(angle_deg)), ...
-          'FontSize', 11, 'FontWeight', 'bold');
+% % sgtitle('Wavelets for each combination of scale \lambda_1 and angle \theta', 'FontSize', 14, 'FontWeight', 'bold');
+% % annotation('textbox', [0, 0, 1, 0.05], 'String', ...
+% %    'Color hue denotes complex phase, lightness denotes inverse magnitude', ...
+% %    'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', ...
+% %    'FontSize', 10, 'EdgeColor', 'none');
+%% Save figure and filter information
+% Create output directory if it doesn't exist
+output_dir = 'figures';
+if ~isfolder(output_dir)
+    mkdir(output_dir);
 end
 
-sgtitle('2D Morlet Wavelet Filters: Magnitude', 'FontSize', 14, 'FontWeight', 'bold');
+% Save the figure as PNG
+fig_filename = fullfile(output_dir, sprintf('wavelets_J%d_angles%d.png', J, numAngles));
+saveas(gcf, fig_filename);
+fprintf('Figure saved to: %s\n', fig_filename);
 
-%% Display the scaling function (low-pass filter)
-% Visualize the low-pass scaling function used by the scattering network
-figure('Position', [100, 100, 600, 500]);
-
-% Transform scaling filter to spatial domain
-phi_spatial = ifft2(phif);
-phi_spatial = fftshift(phi_spatial);
-
-% Zoom in on scaling function too
-phi_zoomed = phi_spatial(row_range, col_range);
-
-imagesc(abs(phi_zoomed));
-colormap(gray);
-colorbar;
-axis image;
-title('Scaling Function (Low-pass Filter)', 'FontSize', 14, 'FontWeight', 'bold');
 
 %% Print filter information
 % Print summary metadata and sample filter parameters to the command window
@@ -186,6 +142,29 @@ fprintf('%.4f ', angles);
 fprintf('\n\nAngles (as fractions of pi): ');
 fprintf('%.4f*pi ', angles/pi);
 fprintf('\n');
+
+% Save filter information to text file
+info_filename = fullfile(output_dir, sprintf('filter_info_J%d_angles%d.txt', J, numAngles));
+fid = fopen(info_filename, 'w');
+
+fprintf(fid, '=== Filter Bank Information ===\n');
+fprintf(fid, 'Image Size: %d x %d\n', imageSize(1), imageSize(2));
+fprintf(fid, 'Number of Scales (J): %d\n', J);
+fprintf(fid, 'Number of Angles: %d\n', numAngles);
+fprintf(fid, 'Total Number of Wavelets: %d\n', numFilters);
+fprintf(fid, '\nAngles (in radians): ');
+fprintf(fid, '%.4f ', angles);
+fprintf(fid, '\n\nAngles (as fractions of pi): ');
+fprintf(fid, '%.4f*pi ', angles/pi);
+fprintf(fid, '\n');
+
+if ~isempty(filterparams) && istable(filterparams{1})
+    fprintf(fid, '\n=== Sample Filter Parameters ===\n');
+    writetable(filterparams{1}(1:min(12, height(filterparams{1})), :), info_filename, 'WriteMode', 'append');
+end
+
+fclose(fid);
+fprintf('Filter information saved to: %s\n', info_filename);
 
 % Display filter parameters from the first few filters
 fprintf('\n=== Sample Filter Parameters ===\n');
