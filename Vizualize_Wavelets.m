@@ -1,3 +1,31 @@
+% Vizualize_Wavelets Visualize 2D Morlet wavelet filters using waveletScattering2
+%
+% Syntax
+%    Vizualize_Wavelets
+%
+% Description
+%    Generates and visualizes 2D Morlet wavelet filters for multiple scales and
+%    rotations using MATLAB's waveletScattering2. Displays colorized complex
+%    wavelets (phase->hue, magnitude->lightness), their magnitudes, and the
+%    scaling (low-pass) function.
+%
+% Inputs
+%    None (parameters are set in the script: imageSize, J, numAngles)
+%
+% Outputs
+%    Plots: colorized wavelets, magnitude maps, and scaling function. Prints
+%    basic filter information to the command window.
+%
+% Requirements
+%    Wavelet Toolbox (waveletScattering2), MATLAB R2020b or later recommended.
+%
+% Examples
+%    Run the script:
+%       Vizualize_Wavelets
+%
+% See also
+%    waveletScattering2, filterbank, ifft2, fftshift, imagesc, imshow
+
 % Plot 2D Morlet Wavelet Filters
 % ==============================
 % This script generates and visualizes 2D Morlet wavelet filters
@@ -39,6 +67,7 @@ angles = linspace(0, pi, numAngles + 1);
 angles = angles(1:numAngles);  % Remove the endpoint (not including pi)
 
 %% Display wavelets using complex phase coloring
+% The colorization maps complex phase to hue and inverse magnitude to lightness
 figure('Position', [100, 100, 1400, 600]);
 
 % Determine zoom region (central region of image for better visibility)
@@ -87,6 +116,7 @@ annotation('textbox', [0, 0, 1, 0.05], 'String', ...
     'FontSize', 10, 'EdgeColor', 'none');
 
 %% Display magnitude of wavelets
+% Show normalized magnitudes with a consistent color scale for comparison
 figure('Position', [100, 100, 1400, 600]);
 
 for k = 1:numFilters
@@ -128,6 +158,7 @@ end
 sgtitle('2D Morlet Wavelet Filters: Magnitude', 'FontSize', 14, 'FontWeight', 'bold');
 
 %% Display the scaling function (low-pass filter)
+% Visualize the low-pass scaling function used by the scattering network
 figure('Position', [100, 100, 600, 500]);
 
 % Transform scaling filter to spatial domain
@@ -144,6 +175,7 @@ axis image;
 title('Scaling Function (Low-pass Filter)', 'FontSize', 14, 'FontWeight', 'bold');
 
 %% Print filter information
+% Print summary metadata and sample filter parameters to the command window
 fprintf('\n=== Filter Bank Information ===\n');
 fprintf('Image Size: %d x %d\n', imageSize(1), imageSize(2));
 fprintf('Number of Scales (J): %d\n', J);
@@ -168,6 +200,22 @@ end
 % - Hue represents complex phase
 % - Lightness represents inverse magnitude
 function rgb = colorize(im)
+% COLORIZE Convert complex image to RGB representation using phase->hue and
+% inverse magnitude->lightness mapping.
+%
+% Syntax
+%    rgb = colorize(im)
+%
+% Inputs
+%    im  - 2D complex array (wavelet in spatial domain)
+%
+% Outputs
+%    rgb - M-by-N-by-3 RGB image with values in [0,1]
+%
+% Notes
+%    The function normalizes the input by its maximum magnitude, maps the
+%    phase to hue in [0,1), maps magnitude inversely to lightness and uses
+%    a fixed saturation for vivid colors.
     % Normalize to have largest magnitude one
     max_val = max(abs(im(:)));
     if max_val > 0
@@ -197,8 +245,22 @@ end
 
 % Helper function to convert HLS to RGB
 function rgb = hls_to_rgb(h, l, s)
-    % Simplified HLS to RGB conversion
-    % This mimics Python's colorsys.hls_to_rgb
+% HLS_TO_RGB Convert a single HLS triplet to RGB.
+%
+% Syntax
+%    rgb = hls_to_rgb(h, l, s)
+%
+% Inputs
+%    h - hue in [0,1)
+%    l - lightness in [0,1]
+%    s - saturation in [0,1]
+%
+% Outputs
+%    rgb - 1x3 vector [r g b] in [0,1]
+%
+% Notes
+%    This implementation mimics Python's colorsys.hls_to_rgb behavior for a
+%    single scalar triplet.
     if s == 0
         rgb = [l, l, l];
         return;
@@ -220,6 +282,17 @@ end
 
 % Helper function for HLS to RGB conversion
 function val = hue_to_rgb(m1, m2, hue)
+% HUE_TO_RGB Helper used by hls_to_rgb to interpolate a single color channel.
+%
+% Syntax
+%    val = hue_to_rgb(m1, m2, hue)
+%
+% Inputs
+%    m1, m2 - helper values computed from lightness and saturation
+%    hue    - hue offset for the channel (may be outside [0,1], wrapped)
+%
+% Outputs
+%    val - scalar channel value in [0,1]
     hue = mod(hue, 1.0);
     if hue < 1/6
         val = m1 + (m2 - m1) * hue * 6;
