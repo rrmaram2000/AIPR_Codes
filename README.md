@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository contains MATLAB code for colorectal cancer (CRC) tissue classification using wavelet scattering features combined with Support Vector Machine (SVM) classifiers. The code is designed for reproducibility, interpretability, and clear documentation.
+This repository contains MATLAB code for colorectal cancer (CRC) tissue classification using wavelet scattering features combined with Support Vector Machine (SVM) classifiers. The code is designed for reproducibility and documentation of our research observations.
 
 ## Repository Contents
 
@@ -16,18 +16,13 @@ This repository contains MATLAB code for colorectal cancer (CRC) tissue classifi
    - Cross-validation and performance evaluation
    - Results visualization and saving
 
-2. Feature_Space_Analysis.m - Feature space visualization using t-SNE:
-   - Loads saved classification results
-   - Performs one-vs-all t-SNE analysis for each tissue class
-   - Generates 2D projections showing class separability
-
-3. Scattering_Path_Analysis_FINAL.m - Wavelet scattering path analysis:
+2. Scattering_Path_Analysis_FINAL.m - Wavelet scattering path analysis:
    - Documents the scattering network structure
    - Retrieves and tabulates scattering paths
    - Provides frequency/scale/rotation metadata
    - Saves path information for reference
 
-4. Vizualize_Wavelets.m - Wavelet filter visualization:
+3. Vizualize_Wavelets.m - Wavelet filter visualization:
    - Generates 2D Morlet wavelet filters
    - Displays colorized complex wavelets (phase and magnitude)
    - Shows scaling function (low-pass filter)
@@ -200,14 +195,6 @@ To reproduce exact results:
 3. Use the same dataset path
 4. Keep default CONFIG parameters
 
-Verify reproducibility by running the script twice and comparing predicted labels:
-
-load('CRC_Classification_Results.mat');
-results1 = results;
-Main_CRC_Classification
-load('CRC_Classification_Results.mat');
-results2 = results;
-isequal(results1.predicted_labels, results2.predicted_labels)
 
 ## Performance Metrics
 
@@ -216,42 +203,9 @@ isequal(results1.predicted_labels, results2.predicted_labels)
 - Recall: Of all actual class X samples, how many were correctly identified
 - F1-Score: Harmonic mean of precision and recall, useful for balanced evaluation
 
-## Troubleshooting
 
-Common issues and solutions:
 
-1. Cannot find image files
-   Solution: Update DATA_PATH in Main_CRC_Classification.m to correct location
-
-2. Parallel pool failed to start
-   Solution: Comment out parallel pool code (lines 96-103) or install Parallel Computing Toolbox
-
-3. Out of memory
-   Solution: Reduce number of images, close other applications, or use machine with more RAM
-
-4. Toolbox not found
-   Solution: Install required toolboxes via MATLAB Add-On Explorer
-
-## References
-
-1. Kather, J. N., Weis, C.-A., Bianconi, F., Melcher, S. M., Schad, L. R., Gaiser, T., Zollner, F. G. (2016). Multi-class texture analysis in colorectal cancer histology. Scientific Reports, 6, 27988.
-
-2. Mallat, S. (2012). Group Invariant Scattering. Communications on Pure and Applied Mathematics, 65(10), 1331-1398.
-
-3. MATLAB Wavelet Scattering Documentation: https://www.mathworks.com/help/wavelet/
 
 ## Acknowledgments
 
-I would like to express my sincere gratitude to my advisors for their guidance and support throughout this research project.
-
-## License
-
-This code is provided for educational and research purposes.
-
-## Author
-
-Ritish Raghav Maram (rrmaram2000@gmail.com)
-
-## Last Updated
-
-2025
+I would like to thank Prof. Murray Loew and Dr. Elliot Levy for their guidance and mentorship throughout this research project.
