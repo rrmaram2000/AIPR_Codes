@@ -12,7 +12,7 @@ This repository contains MATLAB code for colorectal cancer (CRC) tissue classifi
    - Dataset loading and exploration
    - Train/test splitting
    - Wavelet scattering feature extraction
-   - SVM classifier training with ECOC (Error-Correcting Output Codes)
+   - Multi-class SVM classifier training
    - Cross-validation and performance evaluation
    - Results visualization and saving
 
