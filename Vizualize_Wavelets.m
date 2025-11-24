@@ -108,7 +108,7 @@ for k = 1:numFilters
 
     % Add title with lambda and angle in degrees
     angle_deg = angles(theta_idx + 1) * 180 / pi;
-    title(sprintf('\\lambda_1 = %d\n\\theta = %d°', lambda_1, round(angle_deg)), ...
+    title(sprintf('\\lambda_1 = %d\n\\theta_1 = %d°', lambda_1, round(angle_deg)), ...
           'FontSize', 11, 'FontWeight', 'bold');
 end
 
