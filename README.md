@@ -96,7 +96,7 @@ The script will:
 8. Generate visualizations
 9. Save results to CRC_Classification_Results.mat
 
-Expected runtime: 15-60 minutes depending on system and parallel computing availability.
+
 
 ### Feature Space Analysis
 After running the main classification, analyze the feature space:
