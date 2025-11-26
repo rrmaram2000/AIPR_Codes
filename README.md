@@ -202,7 +202,10 @@ To reproduce exact results:
 - Recall: Of all actual class X samples, how many were correctly identified
 - F1-Score: Harmonic mean of precision and recall, useful for balanced evaluation
 
-
+## Computational Efficiency
+- Feature extraction: 2.42 minutes (all train and test images)
+- Training: 23.82 seconds
+- Prediction: 0.04 seconds
 
 
 ## Acknowledgments
