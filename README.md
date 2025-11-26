@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository contains MATLAB code for colorectal cancer (CRC) tissue classification using wavelet scattering features combined with Support Vector Machine (SVM) classifiers. The code is designed for reproducibility and documentation of our research observations.
+This repository contains MATLAB code for colorectal cancer (CRC) tissue classification using wavelet scattering features combined with Support Vector Machine (SVM) classifier. The code is designed for reproducibility and documentation of our research observations.
 
 ## Repository Contents
 
