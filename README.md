@@ -191,9 +191,8 @@ The code is designed for reproducibility with the following features:
 
 To reproduce exact results:
 1. Use the same random seed (already set to 100)
-2. Use the same MATLAB version
-3. Use the same dataset path
-4. Keep default CONFIG parameters
+2. Use MATLAB R2019b or later is recommended
+3. Keep default CONFIG parameters
 
 
 ## Performance Metrics
