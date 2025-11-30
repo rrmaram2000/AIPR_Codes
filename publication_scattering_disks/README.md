@@ -2,10 +2,6 @@
 
 Standalone implementation for generating publication-quality scattering disk visualizations from H&E stained histopathology images.
 
-## System Requirements
-- MATLAB R2016b or later
-- Image Processing Toolbox
-- No additional toolboxes required
 
 ## Quick Start
 
