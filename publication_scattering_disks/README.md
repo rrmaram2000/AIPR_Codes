@@ -74,3 +74,6 @@ publication_scattering_disks/
 **Poor quality output**
 - Increase image size `Nim` (must be power of 2: 128, 256, 512)
 - Adjust wavelet parameters `J` and `L`
+
+**Acknowledgement**
+This visualization script is developed and refined from the ScatNet MATLAB toolbox (https://github.com/scatnet/scatnet) with acknowledgment to the original contributors.
