@@ -5,40 +5,61 @@
 % DESCRIPTION:
 %   This script computes wavelet scattering transforms on color images and
 %   compares them with Gaussian random fields having matched power spectra.
-%   The analysis quantifies texture organization beyond second-order statistics.
+%   The analysis quantifies texture organization beyond second-order statistics
+%   by revealing higher-order statistical patterns that distinguish structured
+%   biological textures from random noise.
+%
 %   Creates publication-ready figures showing:
 %   - ONE disk for 1st order scattering (RGB combined)
 %   - ONE disk for 2nd order scattering (RGB combined)
+%   - Side-by-side comparison: original H&E tissue vs matched Gaussian field
 %
 % REQUIREMENTS:
-%   - ScatNet toolbox functions (scat, wavelet_factory_2d, etc.)
-%   - Image file: tumor_patch.tif (or modify line 63)
+%   - MATLAB with Image Processing Toolbox
+%   - ScatNet toolbox for wavelet scattering transforms
+%     Functions used: scat, wavelet_factory_2d, and related utilities
+%   - Image file: tumor_patch.tif (or modify line 114)
 %   - Helper functions: recover_meta, scat_display_with_borders, crop,
 %     add_circular_mask
 %
 % OUTPUTS:
-%   - Figure: Scattering disk comparison (original vs Gaussian)
-%   - Saved PNG: ScatteringDisks_Comparison.png in current folder
+%   - Figure: 2x4 grid showing scattering disk comparison (original vs Gaussian)
+%   - Saved file: figures/ScatteringDisks_Comparison.png (600 DPI)
 %   - Workspace variable 'results' with scattering coefficients and metrics
 %
 % PARAMETERS:
-%   Nim                - Image size (must be power of 2), default: 256
-%   foptions.J         - Maximum wavelet scale, default: 2
+%   Nim                - Image size in pixels (must be power of 2), default: 256
+%   foptions.J         - Maximum wavelet scale (octaves), default: 2
 %   foptions.L         - Number of orientations, default: 6
 %   soptions.M         - Scattering order, default: 2 (second-order)
 %   combination_method - RGB combination method:
 %                        'luminance' - weighted (0.299R + 0.587G + 0.114B)
+%                                     [Recommended for H&E images]
 %                        'average'   - simple average (R+G+B)/3
 %                        'norm'      - L2 norm sqrt(R^2 + G^2 + B^2)
 %
-% REFERENCE:
-%   Based on ISCV_Figure5.m template
-%   Modified for IEEE AIPR paper publication-ready figures
+% METHODOLOGY:
+%   1. Processes each RGB channel independently with scattering transform
+%   2. Combines scattering coefficients using specified method
+%   3. Generates Gaussian random fields with matched power spectra
+%   4. Computes scattering distance ratios to quantify texture complexity
+%   5. Visualizes results as scattering disks for intuitive comparison
+%
+% ACKNOWLEDGMENTS:
+%   This script is motivated and uses the ScatNet MATLAB toolbox for wavelet scattering
+%   transforms for developing this analysis.
+%   Repository: https://github.com/scatnet/scatnet.git
 %
 % 
-% DATE: 2025-11-29
 %
-% See also: scat, wavelet_factory_2d, recover_meta, scat_display_with_borders
+% REFERENCE:
+% 
+%
+% AUTHOR: Ritish Maram
+% DATE: 2025-11-29
+% 
+%
+% 
 
 close all;
 clear;
