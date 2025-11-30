@@ -29,7 +29,7 @@ This repository contains MATLAB code for colorectal cancer (CRC) tissue classifi
 
 ### Additional Directories
 
-- publication_scattering_disks/ - Standalone implementation for generating publication-quality scattering disk visualizations from H&E stained histopathology images. Includes a complete self-contained toolbox with wavelet filters, scattering transforms, and visualization helpers. Developed and refined from the ScatNet MATLAB toolbox (https://github.com/scatnet/scatnet) with acknowledgment to the original contributors. See [publication_scattering_disks/README.md](publication_scattering_disks/README.md) for detailed usage instructions.
+- publication_scattering_disks/ - Standalone implementation for generating publication-quality scattering disk visualizations from H&E stained histopathology images. Includes a complete self-contained toolbox with wavelet filters, scattering transforms, and visualization helpers. 
 
 ### Output Directories
 
