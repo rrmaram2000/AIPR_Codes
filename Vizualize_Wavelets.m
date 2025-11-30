@@ -71,7 +71,10 @@ angles = angles(1:numAngles);  % Remove the endpoint (not including pi)
 
 %% Display wavelets using complex phase coloring
 % The colorization maps complex phase to hue and inverse magnitude to lightness
-figure('Position', [100, 100, 1400, 600]);
+% Create publication-quality figure with larger size
+fig = figure('Position', [100, 100, 2400, 1000], ...
+             'Color', 'white', ...
+             'PaperPositionMode', 'auto');
 
 % Determine zoom region (central region of image for better visibility)
 [M, N] = size(psi(:,:,1));
@@ -104,19 +107,37 @@ for k = 1:numFilters
     % Colorize and display the complex wavelet
     rgb = colorize(psi_zoomed);
     imshow(rgb);
-    axis image off;
+    axis image on;
 
-    % Add title with lambda and angle in degrees
+    % Add a thin rectangular frame around the image
+    set(gca, 'XTick', [], 'YTick', [], ...
+             'Box', 'on', ...
+             'LineWidth', 1, ...
+             'XColor', 'k', 'YColor', 'k');
+
+    % Add title with lambda and angle in degrees - larger font for publication
     angle_deg = angles(theta_idx + 1) * 180 / pi;
     title(sprintf('\\lambda_1 = %d\n\\theta_1 = %d°', lambda_1, round(angle_deg)), ...
-          'FontSize', 11, 'FontWeight', 'bold');
+          'FontSize', 18, 'FontWeight', 'bold', 'Interpreter', 'tex');
 end
 
-% % sgtitle('Wavelets for each combination of scale \lambda_1 and angle \theta', 'FontSize', 14, 'FontWeight', 'bold');
-% % annotation('textbox', [0, 0, 1, 0.05], 'String', ...
-% %    'Color hue denotes complex phase, lightness denotes inverse magnitude', ...
-% %    'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', ...
-% %    'FontSize', 10, 'EdgeColor', 'none');
+% Improve subplot spacing for better readability
+set(fig, 'Units', 'normalized');
+% Adjust the spacing between subplots
+h = get(fig, 'Children');
+if ~isempty(h)
+    % Get all axes
+    all_axes = findall(fig, 'Type', 'axes');
+    % Tighten the layout
+    for ax_idx = 1:length(all_axes)
+        pos = get(all_axes(ax_idx), 'Position');
+        % Increase subplot size slightly for better visibility
+        pos(3) = pos(3) * 1.1;  % width
+        pos(4) = pos(4) * 1.1;  % height
+        set(all_axes(ax_idx), 'Position', pos);
+    end
+end
+
 %% Save figure and filter information
 % Create output directory if it doesn't exist
 output_dir = 'figures';
@@ -124,10 +145,27 @@ if ~isfolder(output_dir)
     mkdir(output_dir);
 end
 
-% Save the figure as PNG
-fig_filename = fullfile(output_dir, sprintf('wavelets_J%d_angles%d.png', J, numAngles));
-saveas(gcf, fig_filename);
-fprintf('Figure saved to: %s\n', fig_filename);
+% Save the figure in multiple high-quality formats for publication
+
+% 1. High-resolution PNG (300 DPI for print quality)
+fig_filename_png = fullfile(output_dir, sprintf('wavelets_J%d_angles%d_highres.png', J, numAngles));
+print(fig, fig_filename_png, '-dpng', '-r300');  % 300 DPI
+fprintf('High-resolution PNG saved to: %s\n', fig_filename_png);
+
+% 2. TIFF format (lossless, good for publications)
+fig_filename_tiff = fullfile(output_dir, sprintf('wavelets_J%d_angles%d_highres.tif', J, numAngles));
+print(fig, fig_filename_tiff, '-dtiff', '-r300');  % 300 DPI TIFF
+fprintf('High-resolution TIFF saved to: %s\n', fig_filename_tiff);
+
+% 3. EPS format (vector graphics, excellent for LaTeX/publication)
+fig_filename_eps = fullfile(output_dir, sprintf('wavelets_J%d_angles%d.eps', J, numAngles));
+print(fig, fig_filename_eps, '-depsc', '-r300');  % EPS with color
+fprintf('EPS (vector) saved to: %s\n', fig_filename_eps);
+
+% 4. PDF format (vector graphics, good for direct inclusion)
+fig_filename_pdf = fullfile(output_dir, sprintf('wavelets_J%d_angles%d.pdf', J, numAngles));
+exportgraphics(fig, fig_filename_pdf, 'ContentType', 'vector', 'Resolution', 300);
+fprintf('PDF (vector) saved to: %s\n', fig_filename_pdf);
 
 
 %% Print filter information
