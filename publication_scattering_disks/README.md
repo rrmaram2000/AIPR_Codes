@@ -50,9 +50,6 @@ img_color = imread('data/your_image.tif');
 
 The script generates four files in the current directory:
 - `ScatteringDisks_Comparison.png` (600 DPI raster)
-- `ScatteringDisks_Comparison.eps` (vector, recommended for LaTeX)
-- `ScatteringDisks_Comparison.pdf` (vector)
-- `ScatteringDisks_Comparison.tif` (lossless)
 
 ## File Structure
 ```
