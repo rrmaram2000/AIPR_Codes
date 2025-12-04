@@ -118,7 +118,7 @@ for k = 1:numFilters
     % Add title with lambda and angle in degrees - larger font for publication
     angle_deg = angles(theta_idx + 1) * 180 / pi;
     title(sprintf('\\lambda_1 = %d\n\\theta_1 = %d°', lambda_1, round(angle_deg)), ...
-          'FontSize', 18, 'FontWeight', 'bold', 'Interpreter', 'tex');
+          'FontSize', 24, 'FontWeight', 'bold', 'Interpreter', 'tex');
 end
 
 % Improve subplot spacing for better readability
