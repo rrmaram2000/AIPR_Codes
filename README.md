@@ -7,6 +7,14 @@ classification using wavelet scattering features combined with Support Vector
 Machine (SVM) classifier. The code is designed for reproducibility and
 documentation of our research observations.
 
+> 📖 **If this code or its associated resources are useful in your research,
+> please cite our paper:** Maram, R.R., Levy, E., Loew, M.H. (2026). _Wavelet
+> Scattering Features Based Colon Cancer Histology Classification._ AIPR 2025,
+> LNCS vol 16446. Springer, Cham.
+> [https://doi.org/10.1007/978-3-032-18474-0_37](https://doi.org/10.1007/978-3-032-18474-0_37)
+> · Free-to-read: [https://rdcu.be/ffEKC](https://rdcu.be/ffEKC) · See
+> [full citation and BibTeX ↓](#citation)
+
 ## Repository Contents
 
 ### Main Scripts
