@@ -1,0 +1,37 @@
+cff-version: 1.2.0
+message: "If you find this code or any of the associated resources helpful in your research, please cite our paper."
+type: software
+title: "CRC Tissue Classification using Wavelet Scattering Transform"
+authors:
+  - family-names: Maram
+    given-names: Ritish R.
+  - family-names: Levy
+    given-names: Elliot
+  - family-names: Loew
+    given-names: Murray H.
+repository-code: "https://github.com/rrmaram2000/AIPR_Codes"
+preferred-citation:
+  type: conference-paper
+  title: "Wavelet Scattering Features Based Colon Cancer Histology Classification"
+  authors:
+    - family-names: Maram
+      given-names: Ritish R.
+    - family-names: Levy
+      given-names: Elliot
+    - family-names: Loew
+      given-names: Murray H.
+  editors:
+    - family-names: Tanner
+      given-names: F.
+    - family-names: Irvine
+      given-names: J.
+  collection-title: "Applied Imagery Pattern Recognition. AIPR 2025"
+  collection-type: proceedings
+  series: "Lecture Notes in Computer Science"
+  volume: 16446
+  year: 2026
+  publisher:
+    name: "Springer"
+  address: "Cham"
+  doi: "10.1007/978-3-032-18474-0_37"
+  url: "https://doi.org/10.1007/978-3-032-18474-0_37"

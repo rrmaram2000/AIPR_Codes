@@ -2,7 +2,10 @@
 
 ## Overview
 
-This repository contains MATLAB code for colorectal cancer (CRC) tissue classification using wavelet scattering features combined with Support Vector Machine (SVM) classifier. The code is designed for reproducibility and documentation of our research observations.
+This repository contains MATLAB code for colorectal cancer (CRC) tissue
+classification using wavelet scattering features combined with Support Vector
+Machine (SVM) classifier. The code is designed for reproducibility and
+documentation of our research observations.
 
 ## Repository Contents
 
@@ -29,29 +32,38 @@ This repository contains MATLAB code for colorectal cancer (CRC) tissue classifi
 
 ### Additional Directories
 
-- publication_scattering_disks/ - Standalone implementation for generating publication-quality scattering disk visualizations from H&E stained histopathology images. Includes a complete self-contained toolbox with wavelet filters, scattering transforms, and visualization helpers. 
+- publication_scattering_disks/ - Standalone implementation for generating
+  publication-quality scattering disk visualizations from H&E stained
+  histopathology images. Includes a complete self-contained toolbox with wavelet
+  filters, scattering transforms, and visualization helpers.
 
 ### Output Directories
 
-- figures/ - Contains generated visualizations (confusion matrices, performance plots, sample images, wavelet visualizations)
-- wavelet_scattering_paths/ - Contains saved scattering path metadata (CSV and MAT files)
+- figures/ - Contains generated visualizations (confusion matrices, performance
+  plots, sample images, wavelet visualizations)
+- wavelet_scattering_paths/ - Contains saved scattering path metadata (CSV and
+  MAT files)
 
 ### Generated Files
 
-- CRC_Classification_Results.mat - Saved classification results including trained model, features, and metrics
+- CRC_Classification_Results.mat - Saved classification results including
+  trained model, features, and metrics
 
 ## Requirements
 
 ### MATLAB Version
+
 - MATLAB R2019b or later recommended
 
 ### Required Toolboxes
+
 1. Wavelet Toolbox - For wavelet scattering transform
 2. Statistics and Machine Learning Toolbox - For SVM classifier
 3. Parallel Computing Toolbox (optional) - For faster processing
 4. Image Processing Toolbox - For image handling
 
 ### Dataset
+
 - Kather Texture 2016 Image Tiles (5000 histology images)
 - Download from: https://zenodo.org/record/53169
 - Dataset contains 8 tissue classes:
@@ -67,29 +79,32 @@ This repository contains MATLAB code for colorectal cancer (CRC) tissue classifi
 ## Setup and Installation
 
 ### Step 1: Download Dataset
-Download the Kather texture dataset from Zenodo and extract to a known location on your system.
+
+Download the Kather texture dataset from Zenodo and extract to a known location
+on your system.
 
 ### Step 2: Update Data Path
+
 Open Main_CRC_Classification.m and modify line 14:
 
 DATA_PATH = "YOUR/PATH/TO/Kather_texture_2016_image_tiles_5000";
 
 ### Step 3: Verify Toolbox Installation
+
 Check if required toolboxes are installed in MATLAB:
 
-ver wavelet
-ver stats
-ver images
-ver parallel
+ver wavelet ver stats ver images ver parallel
 
 ## Running the Code
 
 ### Main Classification Pipeline
+
 Run the main classification script:
 
 Main_CRC_Classification
 
 The script will:
+
 1. Load and explore the data
 2. Set up parallel computing (if available)
 3. Split data into train/test sets (80/20 by default)
@@ -100,23 +115,26 @@ The script will:
 8. Generate visualizations
 9. Save results to CRC_Classification_Results.mat
 
-
-
 ### Feature Space Analysis
+
 After running the main classification, analyze the feature space:
 
 Feature_Space_Analysis
 
-This generates t-SNE visualizations showing how well different tissue classes separate in the feature space.
+This generates t-SNE visualizations showing how well different tissue classes
+separate in the feature space.
 
 ### Scattering Path Analysis
+
 To understand the wavelet scattering network structure:
 
 Scattering_Path_Analysis_FINAL
 
-This documents all scattering paths and saves detailed metadata about the wavelet filters.
+This documents all scattering paths and saves detailed metadata about the
+wavelet filters.
 
 ### Wavelet Visualization
+
 To visualize the Morlet wavelet filters:
 
 Vizualize_Wavelets
@@ -125,7 +143,8 @@ This creates plots showing the 2D wavelets at different scales and orientations.
 
 ## Configuration Options
 
-The main classification script uses a CONFIG structure with the following default parameters:
+The main classification script uses a CONFIG structure with the following
+default parameters:
 
 - train_ratio: 0.8 (80% training, 20% testing)
 - k_fold: 10 (10-fold cross-validation)
@@ -138,12 +157,16 @@ The main classification script uses a CONFIG structure with the following defaul
 - svm_kernel_scale: 'auto' (kernel scale parameter)
 - svm_box_constraint: 1 (SVM regularization parameter)
 
-To modify parameters, edit the buildConfig() function in Main_CRC_Classification.m before running.
+To modify parameters, edit the buildConfig() function in
+Main_CRC_Classification.m before running.
 
 ## Output and Results
 
 ### Console Output
-The script provides detailed progress messages for each processing step including:
+
+The script provides detailed progress messages for each processing step
+including:
+
 - Total images loaded and class distribution
 - Training/testing set sizes
 - Feature extraction progress and dimensions
@@ -153,18 +176,24 @@ The script provides detailed progress messages for each processing step includin
 - Per-class performance metrics
 
 ### Visualizations
+
 Generated figures (saved to figures/ directory):
 
 1. Sample_Images.png - Random sample of 20 images from the dataset
-2. Confusion_Matrix.png - Shows classification performance with row and column normalization
-3. PerClass_Performance.png - Bar chart of precision, recall, and F1-score for each tissue class
+2. Confusion_Matrix.png - Shows classification performance with row and column
+   normalization
+3. PerClass_Performance.png - Bar chart of precision, recall, and F1-score for
+   each tissue class
 
 Additional visualizations from other scripts:
+
 - t-SNE plots showing feature space separability (from Feature_Space_Analysis.m)
 - Wavelet filter visualizations (from Vizualize_Wavelets.m)
 
 ### Saved Results
+
 CRC_Classification_Results.mat contains:
+
 - config: All configuration parameters
 - random_seed: Random seed used (100)
 - trainfeatures and testfeatures: Extracted feature matrices
@@ -179,9 +208,8 @@ CRC_Classification_Results.mat contains:
 
 To load and use saved results:
 
-load('CRC_Classification_Results.mat');
-fprintf('Test Accuracy: %.2f%%\n', results.accuracy);
-new_predictions = predict(results.classifier, new_features);
+load('CRC_Classification_Results.mat'); fprintf('Test Accuracy: %.2f%%\n',
+results.accuracy); new_predictions = predict(results.classifier, new_features);
 
 ## Reproducibility
 
@@ -194,24 +222,57 @@ The code is designed for reproducibility with the following features:
 - Deterministic train/test splitting
 
 To reproduce exact results:
+
 1. Use the same random seed (already set to 100)
 2. Use MATLAB R2019b or later is recommended
 3. Keep default CONFIG parameters
-
 
 ## Performance Metrics
 
 - Accuracy: Percentage of correctly classified samples
 - Precision: Of all samples predicted as class X, how many were actually class X
 - Recall: Of all actual class X samples, how many were correctly identified
-- F1-Score: Harmonic mean of precision and recall, useful for balanced evaluation
+- F1-Score: Harmonic mean of precision and recall, useful for balanced
+  evaluation
 
 ## Computational Efficiency
+
 - Feature extraction: 2.42 minutes (all train and test images)
 - Training: 23.82 seconds
 - Prediction: 0.04 seconds
 
+## Citation
+
+If you find this code or any of the associated resources helpful in your
+research, please cite our paper:
+
+> Maram, R.R., Levy, E., Loew, M.H. (2026). Wavelet Scattering Features Based
+> Colon Cancer Histology Classification. In: Tanner, F., Irvine, J. (eds)
+> Applied Imagery Pattern Recognition. AIPR 2025. Lecture Notes in Computer
+> Science, vol 16446. Springer, Cham.
+> https://doi.org/10.1007/978-3-032-18474-0_37
+
+**Free-to-read (Springer Nature SharedIt):** https://rdcu.be/ffEKC
+
+### BibTeX
+
+```bibtex
+@inproceedings{maram2026wavelet,
+  author    = {Maram, Ritish R. and Levy, Elliot and Loew, Murray H.},
+  editor    = {Tanner, F. and Irvine, J.},
+  title     = {Wavelet Scattering Features Based Colon Cancer Histology Classification},
+  booktitle = {Applied Imagery Pattern Recognition. AIPR 2025},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {16446},
+  year      = {2026},
+  publisher = {Springer},
+  address   = {Cham},
+  doi       = {10.1007/978-3-032-18474-0_37},
+  url       = {https://doi.org/10.1007/978-3-032-18474-0_37}
+}
+```
 
 ## Acknowledgments
 
-I would like to thank Prof. Murray Loew and Dr. Elliot Levy for their guidance and mentorship throughout this research project.
+I would like to thank Prof. Murray Loew and Dr. Elliot Levy for their guidance
+and mentorship throughout this research project.
